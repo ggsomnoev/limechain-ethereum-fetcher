@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
 	ethfetcher "ethfetcher/internal/ethereumfetcher"
@@ -20,6 +21,8 @@ type Config struct {
 	DBMinConns        int32         `env:"DB_MIN_CONNS" envDefault:"1"`
 	DBMaxConns        int32         `env:"DB_MAX_CONNS" envDefault:"2"`
 
+	EthNodeURL string `env:"ETH_NODE_URL" envDefault:"https://ethereum-sepolia-rpc.publicnode.com"`
+
 	APIPort string `env:"API_PORT" envDefault:"8080"`
 }
 
@@ -31,7 +34,7 @@ func main() {
 
 	cfg := Config{}
 	if err := env.Parse(&cfg); err != nil {
-		log.Fatal("failed reading configuration, exiting")
+		log.Fatal(fmt.Errorf("failed reading configuration, exiting - %w", err))
 	}
 
 	dbCfg := pg.PoolConfig{
@@ -44,14 +47,17 @@ func main() {
 
 	pool, err := pg.InitPool(appCtx, cfg.DBConnectionURL, dbCfg)
 	if err != nil {
-		log.Fatal("failed initializing db connection pool, exiting")
+		log.Fatal(fmt.Errorf("failed initializing db connection pool, exiting - %w", err))
 	}
 
 	defer pool.Close()
 
 	srv := webapi.NewServer(appCtx)
 
-	ethfetcher.Process(appCtx, pool, srv)
+	err = ethfetcher.Process(appCtx, pool, srv, cfg.EthNodeURL)
+	if err != nil {
+		log.Fatal(fmt.Errorf("failed initializing ethereum fetcher, exiting - %w", err))
+	}
 
 	webapi.Start(procSpawnFn, srv, cfg.APIPort)
 

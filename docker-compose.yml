@@ -1,6 +1,30 @@
 services:
+  ethfetcherapp:
+    container_name: ethfetcherapp
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgres://ethuser:ethpass@ethfetcherdb:5432/postgres?sslmode=disable
+    depends_on:
+      migratedb:
+        condition: service_completed_successfully
+    ports:
+      - "8080:8080"
+
+  migratedb:
+    image: migrate/migrate:v4.17.1
+    container_name: migratedb
+    volumes:
+      - ./migrations:/migrations
+    entrypoint: [ "migrate", "-path", "/migrations", "-database", "pgx5://ethuser:ethpass@ethfetcherdb:5432/postgres", "up" ]
+    depends_on:
+      ethfetcherdb:
+        condition: service_healthy
+    
   ethfetcherdb:
     image: postgres:15.7
+    container_name: ethfetcherdb
     environment:
       POSTGRES_USER: ethuser
       POSTGRES_PASSWORD: ethpass
@@ -9,17 +33,11 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-
-  ethfetcherapp:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    environment:
-      DATABASE_URL: postgres://postgres:postgres@db:5432/postgres?sslmode=disable
-    depends_on:
-      - ethfetcherdb
-    ports:
-      - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ethuser -d postgres"]
+      interval: 1s
+      timeout: 1s
+      retries: 30
 
 volumes:
   pgdata:

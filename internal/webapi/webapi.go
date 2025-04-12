@@ -34,11 +34,11 @@ func Start(procSpawnFn lifecycle.ProcessSpawnFunc, srv *echo.Echo, apiPort strin
 
 func startServer(procSpawnFn lifecycle.ProcessSpawnFunc, e *echo.Echo, apiPort string) {
 	procSpawnFn(func(ctx context.Context) error {
-		logger.GetLogger().Info(fmt.Printf("starting the WebAPI server@%s\n", apiPort))
+		logger.GetLogger().Info(fmt.Printf("starting the WebAPI server on port %s\n", apiPort))
 
 		err := e.Start(fmt.Sprintf(":%s", apiPort))
 		if !errors.Is(err, http.ErrServerClosed) {
-			return fmt.Errorf("could not webAPI server: %w", err)
+			return fmt.Errorf("failed to start the webAPI server: %w", err)
 		}
 
 		return nil
@@ -56,7 +56,7 @@ func stopServer(procSpawnFn lifecycle.ProcessSpawnFunc, e *echo.Echo) {
 
 		err := e.Shutdown(ctxGrace)
 		if err != nil {
-			return fmt.Errorf("failed to shutdown of webAPI server: %w", err)
+			return fmt.Errorf("failed to shutdown the webAPI server: %w", err)
 		}
 
 		return nil

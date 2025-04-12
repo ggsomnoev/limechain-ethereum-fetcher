@@ -11,7 +11,6 @@ COPY vendor ./vendor
 ENV GOFLAGS=-mod=vendor
 
 COPY internal ./internal
-COPY pkg ./pkg
 COPY cmd ./cmd
 
 RUN go build -o main ./cmd/ethfetcher

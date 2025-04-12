@@ -2,7 +2,7 @@ package process
 
 import (
 	"context"
-	"ethfetcher/internal/ethereumfetcher/model"
+	"ethfetcher/internal/ethereumfetcher/api"
 	"ethfetcher/internal/logger"
 	"fmt"
 	"net/http"
@@ -11,9 +11,9 @@ import (
 )
 
 type Service interface {
-	GetEthTransactions(ctx context.Context, transactionHashes []string) ([]model.Transaction, error)
-	GetEthTransactionsByRLP(ctx context.Context, rlpHex string) ([]model.Transaction, error)
-	GetAllEthTransactions(ctx context.Context) ([]model.Transaction, error)
+	GetEthTransactions(ctx context.Context, transactionHashes []string) ([]api.Transaction, error)
+	GetEthTransactionsByRLP(ctx context.Context, rlpHex string) ([]api.Transaction, error)
+	GetAllEthTransactions(ctx context.Context) ([]api.Transaction, error)
 }
 
 func RegisterEthHandlers(ctx context.Context, srv *echo.Echo, svc Service) {
@@ -38,7 +38,7 @@ func handleEthTransactions(ctx context.Context, svc Service) echo.HandlerFunc {
 		transactions, err := svc.GetEthTransactions(ctx, transactionHashes)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{
-				"error": fmt.Sprintf("failed to fetch transactions: %v", err),
+				"error": err.Error(),
 			})
 		}
 
@@ -55,7 +55,7 @@ func handleEthTransactionByRLP(ctx context.Context, svc Service) echo.HandlerFun
 		transactions, err := svc.GetEthTransactionsByRLP(ctx, rlpHex)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{
-				"error": fmt.Sprintf("failed to fetch transactions: %v", err),
+				"error": err.Error(),
 			})
 		}
 

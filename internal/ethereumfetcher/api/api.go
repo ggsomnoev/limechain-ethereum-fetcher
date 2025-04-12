@@ -1,10 +1,10 @@
-package model
+package api
 
 type Transaction struct {
 	TransactionHash   string `json:"transactionHash"`
 	TransactionStatus int    `json:"transactionStatus"`
 	BlockHash         string `json:"blockHash"`
-	BlockNumber       int    `json:"blockNumber"`
+	BlockNumber       uint64 `json:"blockNumber"`
 	From              string `json:"from"`
 	To                string `json:"to"`
 	ContractAddress   string `json:"contractAddress"`

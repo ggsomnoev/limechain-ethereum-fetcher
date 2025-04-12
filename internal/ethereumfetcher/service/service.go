@@ -2,32 +2,78 @@ package service
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
-	"ethfetcher/internal/ethereumfetcher/model"
+	"ethfetcher/internal/ethclient"
+	"ethfetcher/internal/ethereumfetcher/api"
 	"ethfetcher/internal/logger"
 )
 
 type Store interface {
+	GetAll(context.Context) ([]api.Transaction, error)
+	GetByHash(ctx context.Context, hash string) (api.Transaction, error)
+	Insert(context.Context, api.Transaction) error
+}
+type EthereumClient interface {
+	FetchTransactionByHash(ctx context.Context, hash string) (api.Transaction, error)
 }
 
 type Service struct {
-	store Store
+	store     Store
+	ethClient EthereumClient
 }
 
-func NewService(store Store) *Service {
-	return &Service{store: store}
+var ErrTransactionNotFound = errors.New("failed to fetch transactions")
+
+func NewService(store Store, ethClient EthereumClient) *Service {
+	return &Service{
+		store:     store,
+		ethClient: ethClient,
+	}
 }
 
-func (*Service) GetEthTransactions(ctx context.Context, transactionHashes []string) ([]model.Transaction, error) {
-	logger.GetLogger().Info("fetching eth transactions...")
-	return nil, nil
+func (s *Service) GetEthTransactions(ctx context.Context, transactionHashes []string) ([]api.Transaction, error) {
+	var transactions []api.Transaction
+
+	for _, hash := range transactionHashes {
+		tx, err := s.store.GetByHash(ctx, hash)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get transaction %s: %w", hash, err)
+		}
+
+		if tx.TransactionHash == "" {
+			tx, err = s.ethClient.FetchTransactionByHash(ctx, hash)
+			if err != nil {
+				return nil, err
+			}
+
+			if tx.TransactionHash == "" {
+				logger.GetLogger().Warn(fmt.Errorf("%w: %s not found on the ethereum node", ErrTransactionNotFound, hash))
+				continue
+			}
+
+			err = s.store.Insert(ctx, tx)
+			if err != nil {
+				return nil, fmt.Errorf("failed to insert transaction %s: %v", hash, err)
+			}
+		}
+
+		transactions = append(transactions, tx)
+	}
+
+	return transactions, nil
 }
 
-func (*Service) GetEthTransactionsByRLP(ctx context.Context, rlpHex string) ([]model.Transaction, error) {
-	logger.GetLogger().Info("fetching eth transactions by rlpHex...")
-	return nil, nil
+func (s *Service) GetEthTransactionsByRLP(ctx context.Context, rlpHex string) ([]api.Transaction, error) {
+	transactionHashes, err := ethclient.RlpHexToHashList(rlpHex)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.GetEthTransactions(ctx, transactionHashes)
 }
-func (*Service) GetAllEthTransactions(ctx context.Context) ([]model.Transaction, error) {
-	logger.GetLogger().Info("fetching all eth transactions...")
-	return nil, nil
+
+func (s *Service) GetAllEthTransactions(ctx context.Context) ([]api.Transaction, error) {
+	return s.store.GetAll(ctx)
 }
