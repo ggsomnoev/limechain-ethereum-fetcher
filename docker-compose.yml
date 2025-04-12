@@ -1,0 +1,25 @@
+services:
+  ethfetcherdb:
+    image: postgres:15.7
+    environment:
+      POSTGRES_USER: ethuser
+      POSTGRES_PASSWORD: ethpass
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  ethfetcherapp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@db:5432/postgres?sslmode=disable
+    depends_on:
+      - ethfetcherdb
+    ports:
+      - "8080:8080"
+
+volumes:
+  pgdata:
