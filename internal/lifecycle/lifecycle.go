@@ -1,0 +1,82 @@
+package lifecycle
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"log"
+	"os"
+	"os/signal"
+	"sync"
+	"syscall"
+)
+
+var ErrSignalled = errors.New("process signalled for shutdown")
+
+// ProcessSpawnFunc is used to start a long running process.
+// On exit it cancels all other long running processes sharing the same context.
+type ProcessSpawnFunc func(cb func(ctx context.Context) error, procName string)
+
+type Controller struct {
+	wg *sync.WaitGroup
+}
+
+func NewController() *Controller {
+	return &Controller{
+		wg: &sync.WaitGroup{},
+	}
+}
+
+// Start creates an app context that can be used to spawn a group of LRPs.
+//
+// If one LRP exits then all other LRPs are stopped.
+func (c *Controller) Start() (context.Context, ProcessSpawnFunc) {
+	ctx, stopFn := context.WithCancelCause(context.Background())
+
+	procSpawnFn := func(cb func(ctx context.Context) error, procName string) {
+		c.wg.Add(1)
+
+		go func() {
+			defer func() {
+				log.Println("stopping process")
+				c.wg.Done()
+			}()
+
+			err := cb(ctx)
+			if err != nil {
+				if errors.Is(err, context.Canceled) {
+					log.Printf("process stopped on context cancelled - %v\n", procName)
+				} else {
+					log.Printf("failed process - %v\n", procName)
+				}
+			}
+
+			stopFn(err)
+		}()
+	}
+
+	spawnSignalListener(procSpawnFn)
+
+	return ctx, procSpawnFn
+}
+
+// LRP that exits on an os signal or context cancenlled, stopping all other LRPs.
+func spawnSignalListener(spawnFn ProcessSpawnFunc) {
+	spawnFn(func(ctx context.Context) error {
+		signalChan := make(chan os.Signal, 1)
+		signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
+
+		select {
+		case s := <-signalChan:
+			return fmt.Errorf("received %s: %w", s.String(), ErrSignalled)
+		case <-ctx.Done():
+		}
+
+		return nil
+	}, "SignalListener")
+}
+
+// Blocks until all LRPs are stopped.
+func (c *Controller) Wait() {
+	c.wg.Wait()
+}

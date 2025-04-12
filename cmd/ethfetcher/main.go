@@ -1,11 +1,12 @@
 package main
 
 import (
-	"context"
 	"log"
 	"time"
 
+	"ethfetcher/internal/lifecycle"
 	"ethfetcher/internal/pg"
+	"ethfetcher/internal/webapi"
 
 	"github.com/caarlos0/env/v6"
 )
@@ -17,10 +18,13 @@ type Config struct {
 	DBHealthCheck     time.Duration `env:"DB_HEALTH_CHECK_PERIOD" envDefault:"1m"`
 	DBMinConns        int32         `env:"DB_MIN_CONNS" envDefault:"1"`
 	DBMaxConns        int32         `env:"DB_MAX_CONNS" envDefault:"2"`
+
+	WebAPIBindAddress string `env:"WEB_API_BIND_ADDRESS" envDefault:"127.0.0.1:8081"`
 }
 
 func main() {
-	appCtx := context.Background()
+	appController := lifecycle.NewController()
+	appCtx, procSpawnFn := appController.Start()
 
 	cfg := Config{}
 	if err := env.Parse(&cfg); err != nil {
@@ -41,4 +45,12 @@ func main() {
 	}
 
 	defer pool.Close()
+
+	srv := webapi.NewServer(appCtx)
+
+	// Adding routes, business logic..
+
+	webapi.Start(procSpawnFn, srv, cfg.WebAPIBindAddress)
+
+	appController.Wait()
 }
