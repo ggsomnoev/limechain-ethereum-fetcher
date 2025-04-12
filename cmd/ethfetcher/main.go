@@ -1,10 +1,11 @@
 package main
 
 import (
-	"log"
 	"time"
 
+	ethfetcher "ethfetcher/internal/ethereumfetcher"
 	"ethfetcher/internal/lifecycle"
+	"ethfetcher/internal/logger"
 	"ethfetcher/internal/pg"
 	"ethfetcher/internal/webapi"
 
@@ -12,19 +13,21 @@ import (
 )
 
 type Config struct {
-	DBConnectionURL   string        `env:"DB_CONN_URL" envDefault:"postgres://ethuser:ethpass@ethfetcherdb:5432/postgres"`
+	DBConnectionURL   string        `env:"DB_CONNECTION_URL" envDefault:"postgres://ethuser:ethpass@ethfetcherdb:5432/postgres"`
 	DBMaxConnLifetime time.Duration `env:"DB_MAX_CONN_LIFETIME" envDefault:"30m"`
 	DBMaxConnIdleTime time.Duration `env:"DB_MAX_CONN_IDLE_TIME" envDefault:"5m"`
 	DBHealthCheck     time.Duration `env:"DB_HEALTH_CHECK_PERIOD" envDefault:"1m"`
 	DBMinConns        int32         `env:"DB_MIN_CONNS" envDefault:"1"`
 	DBMaxConns        int32         `env:"DB_MAX_CONNS" envDefault:"2"`
 
-	WebAPIBindAddress string `env:"WEB_API_BIND_ADDRESS" envDefault:"127.0.0.1:8081"`
+	APIPort string `env:"API_PORT" envDefault:"8080"`
 }
 
 func main() {
 	appController := lifecycle.NewController()
 	appCtx, procSpawnFn := appController.Start()
+
+	log := logger.GetLogger()
 
 	cfg := Config{}
 	if err := env.Parse(&cfg); err != nil {
@@ -48,9 +51,9 @@ func main() {
 
 	srv := webapi.NewServer(appCtx)
 
-	// Adding routes, business logic..
+	ethfetcher.Process(appCtx, pool, srv)
 
-	webapi.Start(procSpawnFn, srv, cfg.WebAPIBindAddress)
+	webapi.Start(procSpawnFn, srv, cfg.APIPort)
 
 	appController.Wait()
 }

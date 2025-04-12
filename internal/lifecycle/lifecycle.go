@@ -3,8 +3,8 @@ package lifecycle
 import (
 	"context"
 	"errors"
+	"ethfetcher/internal/logger"
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"sync"
@@ -32,22 +32,23 @@ func NewController() *Controller {
 // If one LRP exits then all other LRPs are stopped.
 func (c *Controller) Start() (context.Context, ProcessSpawnFunc) {
 	ctx, stopFn := context.WithCancelCause(context.Background())
+	log := logger.GetLogger()
 
 	procSpawnFn := func(cb func(ctx context.Context) error, procName string) {
 		c.wg.Add(1)
 
 		go func() {
 			defer func() {
-				log.Println("stopping process")
+				log.Info("stopping process")
 				c.wg.Done()
 			}()
 
 			err := cb(ctx)
 			if err != nil {
 				if errors.Is(err, context.Canceled) {
-					log.Printf("process stopped on context cancelled - %v\n", procName)
+					log.Info(fmt.Sprintf("process stopped on context cancelled - %s", procName))
 				} else {
-					log.Printf("failed process - %v\n", procName)
+					log.Error(fmt.Errorf("failed process - %s", procName))
 				}
 			}
 

@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
 	"ethfetcher/internal/lifecycle"
+	"ethfetcher/internal/logger"
 
 	"github.com/labstack/echo/v4"
 )
@@ -22,19 +22,21 @@ func NewServer(ctx context.Context) *echo.Echo {
 	e.HidePort = true
 	e.HideBanner = true
 
+	e.Use(JSONLoggerMiddleware)
+
 	return e
 }
 
-func Start(procSpawnFn lifecycle.ProcessSpawnFunc, srv *echo.Echo, bindAddress string) {
-	startServer(procSpawnFn, srv, bindAddress)
+func Start(procSpawnFn lifecycle.ProcessSpawnFunc, srv *echo.Echo, apiPort string) {
+	startServer(procSpawnFn, srv, apiPort)
 	stopServer(procSpawnFn, srv)
 }
 
-func startServer(procSpawnFn lifecycle.ProcessSpawnFunc, e *echo.Echo, bindAddress string) {
+func startServer(procSpawnFn lifecycle.ProcessSpawnFunc, e *echo.Echo, apiPort string) {
 	procSpawnFn(func(ctx context.Context) error {
-		log.Printf("starting the WebAPI server@%s\n", bindAddress)
+		logger.GetLogger().Info(fmt.Printf("starting the WebAPI server@%s\n", apiPort))
 
-		err := e.Start(bindAddress)
+		err := e.Start(fmt.Sprintf(":%s", apiPort))
 		if !errors.Is(err, http.ErrServerClosed) {
 			return fmt.Errorf("could not webAPI server: %w", err)
 		}
@@ -47,7 +49,7 @@ func startServer(procSpawnFn lifecycle.ProcessSpawnFunc, e *echo.Echo, bindAddre
 func stopServer(procSpawnFn lifecycle.ProcessSpawnFunc, e *echo.Echo) {
 	procSpawnFn(func(ctx context.Context) error {
 		<-ctx.Done()
-		log.Println("stopping the WebAPI server due to app exit")
+		logger.GetLogger().Info("stopping the WebAPI server due to app exit")
 
 		ctxGrace, cancel := context.WithTimeout(context.Background(), gracefulShutdownTimeout)
 		defer cancel()
