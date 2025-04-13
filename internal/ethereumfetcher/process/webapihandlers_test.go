@@ -26,17 +26,19 @@ var (
 
 var _ = Describe("Web API", func() {
 	var (
-		e        *echo.Echo
-		svc      *processfakes.FakeService
-		ctx      context.Context
-		txHash   string
-		tx       api.Transaction
-		recorder *httptest.ResponseRecorder
+		e                  *echo.Echo
+		svc                *processfakes.FakeService
+		tokenValidationSvc *processfakes.FakeTokenValidationService
+		ctx                context.Context
+		txHash             string
+		tx                 api.Transaction
+		recorder           *httptest.ResponseRecorder
 	)
 
 	BeforeEach(func() {
 		e = echo.New()
 		svc = &processfakes.FakeService{}
+		tokenValidationSvc = &processfakes.FakeTokenValidationService{}
 		ctx = context.Background()
 		recorder = httptest.NewRecorder()
 
@@ -48,7 +50,7 @@ var _ = Describe("Web API", func() {
 			Value:           "100",
 		}
 
-		process.RegisterEthHandlers(ctx, e, svc)
+		process.RegisterEthHandlers(ctx, e, svc, tokenValidationSvc)
 	})
 
 	ItReturnsTheTx := func(response map[string]interface{}) {

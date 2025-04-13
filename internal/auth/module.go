@@ -17,7 +17,7 @@ func Process(
 	pool *pgxpool.Pool,
 	srv *echo.Echo,
 	secret string,
-) {
+) *service.Service {
 	authStore := store.NewStore(pool)
 	authService := service.NewService(authStore, secret)
 
@@ -25,4 +25,6 @@ func Process(
 	process.Process(procSpawnFn, authService)
 
 	process.RegisterAuthHandlers(ctx, srv, authService)
+
+	return authService
 }

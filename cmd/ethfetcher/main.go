@@ -60,7 +60,7 @@ func main() {
 
 	srv := webapi.NewServer(appCtx)
 
-	auth.Process(appCtx, procSpawnFn, pool, srv, cfg.JWTSecret)
+	tokenValidationSvc := auth.Process(appCtx, procSpawnFn, pool, srv, cfg.JWTSecret)
 
 	ethCfg := eth.DialConfig{
 		MaxRetries: cfg.EthMaxRetries,
@@ -72,7 +72,7 @@ func main() {
 		log.Fatal(fmt.Errorf("failed initializing ethereum client, exiting - %w", err))
 	}
 
-	ethfetcher.Process(appCtx, pool, srv, ethClient)
+	ethfetcher.Process(appCtx, pool, srv, ethClient, tokenValidationSvc)
 
 	webapi.Start(procSpawnFn, srv, cfg.APIPort)
 

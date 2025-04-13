@@ -18,7 +18,7 @@ var ErrInvalidCredentials = errors.New("invalid credentials")
 type Store interface {
 	ValidateUser(context.Context, string, string) (bool, error)
 	StoreToken(context.Context, model.Token) error
-	IsTokenValid(context.Context, string) (bool, error)
+	IsTokenValid(context.Context, string) (bool, string, error)
 	DeleteExpiredTokens(context.Context) error
 }
 
@@ -70,6 +70,6 @@ func (s *Service) Authenticate(ctx context.Context, username string, password st
 	return signedToken, nil
 }
 
-func (s *Service) ValidateToken(ctx context.Context, token string) (bool, error) {
+func (s *Service) ValidateToken(ctx context.Context, token string) (bool, string, error) {
 	return s.store.IsTokenValid(ctx, token)
 }

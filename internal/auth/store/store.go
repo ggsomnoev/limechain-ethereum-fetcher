@@ -52,17 +52,19 @@ func (s *Store) StoreToken(ctx context.Context, token model.Token) error {
 	return nil
 }
 
-func (s *Store) IsTokenValid(ctx context.Context, token string) (bool, error) {
-	query := fmt.Sprintf(`SELECT 1 FROM %s WHERE token = $1 AND expires_at > NOW()`, TokenTable)
-	var exists int
-	err := s.pool.QueryRow(ctx, query, token).Scan(&exists)
+func (s *Store) IsTokenValid(ctx context.Context, token string) (bool, string, error) {
+	query := fmt.Sprintf(`SELECT username FROM %s WHERE token = $1 AND expires_at > NOW()`, TokenTable)
+	var username string
+	err := s.pool.QueryRow(ctx, query, token).Scan(&username)
+
 	if errors.Is(err, pgx.ErrNoRows) {
-		return false, nil
+		return false, "", nil
 	}
 	if err != nil {
-		return false, fmt.Errorf("failed to check token validity: %w", err)
+		return false, "", fmt.Errorf("failed to check token validity: %w", err)
 	}
-	return true, nil
+
+	return true, username, nil
 }
 
 func (s *Store) DeleteExpiredTokens(ctx context.Context) error {

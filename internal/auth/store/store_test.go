@@ -77,20 +77,22 @@ var _ = Describe("Store", func() {
 		Describe("IsTokenValid", func() {
 			var (
 				valid     bool
+				username  string
 				errAction error
 			)
 
 			JustBeforeEach(func() {
-				valid, errAction = st.IsTokenValid(ctx, token.Value)
+				valid, username, errAction = st.IsTokenValid(ctx, token.Value)
 			})
 
 			Context("when token is valid", func() {
 				BeforeEach(func() {
 					Expect(st.StoreToken(ctx, token)).To(Succeed())
 				})
-				It("should return true", func() {
+				It("should return the correct user", func() {
 					Expect(errAction).NotTo(HaveOccurred())
 					Expect(valid).To(BeTrue())
+					Expect(username).To(Equal("alice"))
 				})
 			})
 
@@ -102,6 +104,7 @@ var _ = Describe("Store", func() {
 				It("should return false", func() {
 					Expect(errAction).NotTo(HaveOccurred())
 					Expect(valid).To(BeFalse())
+					Expect(username).To(BeEmpty())
 				})
 			})
 
@@ -112,6 +115,7 @@ var _ = Describe("Store", func() {
 				It("should return false", func() {
 					Expect(errAction).NotTo(HaveOccurred())
 					Expect(valid).To(BeFalse())
+					Expect(username).To(BeEmpty())
 				})
 			})
 		})
@@ -128,9 +132,10 @@ var _ = Describe("Store", func() {
 				})
 
 				It("should be deleted", func() {
-					valid, err := st.IsTokenValid(ctx, token.Value)
+					valid, username, err := st.IsTokenValid(ctx, token.Value)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(valid).To(BeFalse())
+					Expect(username).To(BeEmpty())
 				})
 			})
 		})

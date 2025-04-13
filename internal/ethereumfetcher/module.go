@@ -24,10 +24,11 @@ func Process(
 	pool *pgxpool.Pool,
 	srv *echo.Echo,
 	gEthClient *gethclient.Client,
+	tokenValidationSvc process.TokenValidationService,
 ) {
 	ethClient := ethclient.NewEthereumClient(gEthClient)
 
 	ethStore := store.NewStore(pool)
 	ethService := service.NewService(ethStore, ethClient)
-	process.RegisterEthHandlers(ctx, srv, ethService)
+	process.RegisterEthHandlers(ctx, srv, ethService, tokenValidationSvc)
 }

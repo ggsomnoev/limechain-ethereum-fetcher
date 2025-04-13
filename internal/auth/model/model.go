@@ -1,6 +1,8 @@
 package model
 
-import "time"
+import (
+	"time"
+)
 
 type AuthRequest struct {
 	Username string `json:"username"`

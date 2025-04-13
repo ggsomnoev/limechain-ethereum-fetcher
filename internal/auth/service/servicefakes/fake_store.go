@@ -20,7 +20,7 @@ type FakeStore struct {
 	deleteExpiredTokensReturnsOnCall map[int]struct {
 		result1 error
 	}
-	IsTokenValidStub        func(context.Context, string) (bool, error)
+	IsTokenValidStub        func(context.Context, string) (bool, string, error)
 	isTokenValidMutex       sync.RWMutex
 	isTokenValidArgsForCall []struct {
 		arg1 context.Context
@@ -28,11 +28,13 @@ type FakeStore struct {
 	}
 	isTokenValidReturns struct {
 		result1 bool
-		result2 error
+		result2 string
+		result3 error
 	}
 	isTokenValidReturnsOnCall map[int]struct {
 		result1 bool
-		result2 error
+		result2 string
+		result3 error
 	}
 	StoreTokenStub        func(context.Context, model.Token) error
 	storeTokenMutex       sync.RWMutex
@@ -126,7 +128,7 @@ func (fake *FakeStore) DeleteExpiredTokensReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeStore) IsTokenValid(arg1 context.Context, arg2 string) (bool, error) {
+func (fake *FakeStore) IsTokenValid(arg1 context.Context, arg2 string) (bool, string, error) {
 	fake.isTokenValidMutex.Lock()
 	ret, specificReturn := fake.isTokenValidReturnsOnCall[len(fake.isTokenValidArgsForCall)]
 	fake.isTokenValidArgsForCall = append(fake.isTokenValidArgsForCall, struct {
@@ -141,9 +143,9 @@ func (fake *FakeStore) IsTokenValid(arg1 context.Context, arg2 string) (bool, er
 		return stub(arg1, arg2)
 	}
 	if specificReturn {
-		return ret.result1, ret.result2
+		return ret.result1, ret.result2, ret.result3
 	}
-	return fakeReturns.result1, fakeReturns.result2
+	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
 }
 
 func (fake *FakeStore) IsTokenValidCallCount() int {
@@ -152,7 +154,7 @@ func (fake *FakeStore) IsTokenValidCallCount() int {
 	return len(fake.isTokenValidArgsForCall)
 }
 
-func (fake *FakeStore) IsTokenValidCalls(stub func(context.Context, string) (bool, error)) {
+func (fake *FakeStore) IsTokenValidCalls(stub func(context.Context, string) (bool, string, error)) {
 	fake.isTokenValidMutex.Lock()
 	defer fake.isTokenValidMutex.Unlock()
 	fake.IsTokenValidStub = stub
@@ -165,30 +167,33 @@ func (fake *FakeStore) IsTokenValidArgsForCall(i int) (context.Context, string) 
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *FakeStore) IsTokenValidReturns(result1 bool, result2 error) {
+func (fake *FakeStore) IsTokenValidReturns(result1 bool, result2 string, result3 error) {
 	fake.isTokenValidMutex.Lock()
 	defer fake.isTokenValidMutex.Unlock()
 	fake.IsTokenValidStub = nil
 	fake.isTokenValidReturns = struct {
 		result1 bool
-		result2 error
-	}{result1, result2}
+		result2 string
+		result3 error
+	}{result1, result2, result3}
 }
 
-func (fake *FakeStore) IsTokenValidReturnsOnCall(i int, result1 bool, result2 error) {
+func (fake *FakeStore) IsTokenValidReturnsOnCall(i int, result1 bool, result2 string, result3 error) {
 	fake.isTokenValidMutex.Lock()
 	defer fake.isTokenValidMutex.Unlock()
 	fake.IsTokenValidStub = nil
 	if fake.isTokenValidReturnsOnCall == nil {
 		fake.isTokenValidReturnsOnCall = make(map[int]struct {
 			result1 bool
-			result2 error
+			result2 string
+			result3 error
 		})
 	}
 	fake.isTokenValidReturnsOnCall[i] = struct {
 		result1 bool
-		result2 error
-	}{result1, result2}
+		result2 string
+		result3 error
+	}{result1, result2, result3}
 }
 
 func (fake *FakeStore) StoreToken(arg1 context.Context, arg2 model.Token) error {

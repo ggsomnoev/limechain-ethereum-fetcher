@@ -73,24 +73,28 @@ var _ = Describe("Service", func() {
 		})
 
 		Describe("ValidateToken", func() {
+			var expectedUsername = "someuser"
 			It("returns true for valid token", func() {
-				store.IsTokenValidReturns(true, nil)
-				valid, err := svc.ValidateToken(ctx, "sometoken")
+				store.IsTokenValidReturns(true, "someuser", nil)
+				valid, username, err := svc.ValidateToken(ctx, "sometoken")
 				Expect(err).ToNot(HaveOccurred())
+				Expect(username).To(Equal(expectedUsername))
 				Expect(valid).To(BeTrue())
 			})
 
 			It("returns false if token is not valid", func() {
-				store.IsTokenValidReturns(false, nil)
-				valid, err := svc.ValidateToken(ctx, "badtoken")
+				store.IsTokenValidReturns(false, "", nil)
+				valid, username, err := svc.ValidateToken(ctx, "badtoken")
 				Expect(err).ToNot(HaveOccurred())
+				Expect(username).To(BeEmpty())
 				Expect(valid).To(BeFalse())
 			})
 
 			It("returns error if store fails", func() {
-				store.IsTokenValidReturns(false, ErrStoreFailed)
-				valid, err := svc.ValidateToken(ctx, "token")
+				store.IsTokenValidReturns(false, "", ErrStoreFailed)
+				valid, username, err := svc.ValidateToken(ctx, "token")
 				Expect(err).To(MatchError(ErrStoreFailed))
+				Expect(username).To(BeEmpty())
 				Expect(valid).To(BeFalse())
 			})
 		})
