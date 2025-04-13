@@ -5,18 +5,21 @@ import (
 	"errors"
 	"fmt"
 
-	"ethfetcher/internal/ethclient"
 	"ethfetcher/internal/ethereumfetcher/api"
 	"ethfetcher/internal/logger"
 )
 
+//counterfeiter:generate . Store
 type Store interface {
 	GetAll(context.Context) ([]api.Transaction, error)
 	GetByHash(ctx context.Context, hash string) (api.Transaction, error)
 	Insert(context.Context, api.Transaction) error
 }
+
+//counterfeiter:generate . EthereumClient
 type EthereumClient interface {
 	FetchTransactionByHash(ctx context.Context, hash string) (api.Transaction, error)
+	RlpHexToHashList(rlpHex string) ([]string, error)
 }
 
 type Service struct {
@@ -66,7 +69,7 @@ func (s *Service) GetEthTransactions(ctx context.Context, transactionHashes []st
 }
 
 func (s *Service) GetEthTransactionsByRLP(ctx context.Context, rlpHex string) ([]api.Transaction, error) {
-	transactionHashes, err := ethclient.RlpHexToHashList(rlpHex)
+	transactionHashes, err := s.ethClient.RlpHexToHashList(rlpHex)
 	if err != nil {
 		return nil, err
 	}

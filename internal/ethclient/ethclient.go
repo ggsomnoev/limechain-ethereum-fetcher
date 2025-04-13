@@ -108,7 +108,7 @@ func contractAddress(receipt *types.Receipt) string {
 	return receipt.ContractAddress.Hex()
 }
 
-func RlpHexToHashList(rlpHex string) ([]string, error) {
+func (ec *EthereumClient) RlpHexToHashList(rlpHex string) ([]string, error) {
 	rlpHex = strings.TrimPrefix(rlpHex, "0x")
 	rlpBytes, err := hex.DecodeString(rlpHex)
 	if err != nil {
