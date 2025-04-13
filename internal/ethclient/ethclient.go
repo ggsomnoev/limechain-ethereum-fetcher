@@ -3,12 +3,14 @@ package ethclient
 import (
 	"context"
 	"encoding/hex"
+	"errors"
 	"ethfetcher/internal/ethereumfetcher/api"
 	"ethfetcher/internal/logger"
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	gethclient "github.com/ethereum/go-ethereum/ethclient"
@@ -56,7 +58,7 @@ func (ec *EthereumClient) FetchTransactionByHash(ctx context.Context, hash strin
 	txHash := common.HexToHash(hash)
 	tx, isPending, err := ec.client.TransactionByHash(ctx, txHash)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
+		if errors.Is(err, ethereum.NotFound) {
 			return result, nil
 		}
 		return result, fmt.Errorf("failed to fetch transaction: %w", err)

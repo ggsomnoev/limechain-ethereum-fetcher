@@ -33,5 +33,9 @@ func InitPool(ctx context.Context, dsn string, cfg PoolConfig) (*pgxpool.Pool, e
 		return nil, fmt.Errorf("DB connection failed: %w", err)
 	}
 
+	if err = pool.Ping(ctx); err != nil {
+		return nil, fmt.Errorf("DB ping failed: %w", err)
+	}
+
 	return pool, nil
 }

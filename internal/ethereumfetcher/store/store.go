@@ -8,10 +8,13 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const TransactionTable = "transactions"
+
+var ErrDuplicateTransaction = errors.New("transaction already exists")
 
 type Store struct {
 	pool *pgxpool.Pool
@@ -86,6 +89,11 @@ func (s *Store) Insert(ctx context.Context, tx api.Transaction) error {
 
 	_, err = s.pool.Exec(ctx, insertQuery, tx.TransactionHash, transactionData)
 	if err != nil {
+		var pgErr *pgconn.PgError
+		// unique_violation error code
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return ErrDuplicateTransaction
+		}
 		return fmt.Errorf("failed to insert transaction into DB: %w", err)
 	}
 
