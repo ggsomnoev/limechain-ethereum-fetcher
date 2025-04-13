@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"ethfetcher/internal/eth"
 	ethfetcher "ethfetcher/internal/ethereumfetcher"
 	"ethfetcher/internal/lifecycle"
 	"ethfetcher/internal/logger"
@@ -21,7 +22,9 @@ type Config struct {
 	DBMinConns        int32         `env:"DB_MIN_CONNS" envDefault:"1"`
 	DBMaxConns        int32         `env:"DB_MAX_CONNS" envDefault:"2"`
 
-	EthNodeURL string `env:"ETH_NODE_URL" envDefault:"https://ethereum-sepolia-rpc.publicnode.com"`
+	EthNodeURL    string        `env:"ETH_NODE_URL" envDefault:"https://ethereum-sepolia-rpc.publicnode.com"`
+	EthMaxRetries int           `env:"ETH_MAX_RETRIES" envDefault:"5"`
+	EthRetryDelay time.Duration `env:"ETH_RETRY_DELAY" envDefault:"2s"`
 
 	APIPort string `env:"API_PORT" envDefault:"8080"`
 }
@@ -54,10 +57,17 @@ func main() {
 
 	srv := webapi.NewServer(appCtx)
 
-	err = ethfetcher.Process(appCtx, pool, srv, cfg.EthNodeURL)
-	if err != nil {
-		log.Fatal(fmt.Errorf("failed initializing ethereum fetcher, exiting - %w", err))
+	ethCfg := eth.DialConfig{
+		MaxRetries: cfg.EthMaxRetries,
+		BaseDelay:  cfg.EthRetryDelay,
 	}
+
+	ethClient, err := eth.InitClientWithRetry(appCtx, cfg.EthNodeURL, ethCfg)
+	if err != nil {
+		log.Fatal(fmt.Errorf("failed initializing ethereum client, exiting - %w", err))
+	}
+
+	ethfetcher.Process(appCtx, pool, srv, ethClient)
 
 	webapi.Start(procSpawnFn, srv, cfg.APIPort)
 

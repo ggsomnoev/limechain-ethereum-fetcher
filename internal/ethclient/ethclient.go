@@ -8,48 +8,24 @@ import (
 	"ethfetcher/internal/logger"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	gethclient "github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
+//counterfeiter:generate . GEthClient
+type GEthClient interface {
+	TransactionByHash(ctx context.Context, hash common.Hash) (*types.Transaction, bool, error)
+	TransactionReceipt(ctx context.Context, hash common.Hash) (*types.Receipt, error)
+}
 type EthereumClient struct {
-	client *gethclient.Client
+	client GEthClient
 }
 
-func NewEthereumClientWithRetry(
-	ctx context.Context,
-	ethNodeURL string,
-	maxRetries int,
-	baseDelay time.Duration,
-) (*EthereumClient, error) {
-	var (
-		client *gethclient.Client
-		err    error
-	)
-
-	for i := 0; i < maxRetries; i++ {
-		client, err = gethclient.DialContext(ctx, ethNodeURL)
-		if err == nil {
-			return &EthereumClient{client: client}, nil
-		}
-
-		logger.GetLogger().Info(fmt.Sprintf("Retrying ethereum node connection...(%d)", i))
-
-		backoff := baseDelay * (1 << i)
-
-		select {
-		case <-time.After(backoff):
-		case <-ctx.Done():
-			return nil, fmt.Errorf("context cancelled during ethereum client dial: %w", ctx.Err())
-		}
-	}
-
-	return nil, fmt.Errorf("failed to connect to ethereum node after %d attempts: %w", maxRetries, err)
+func NewEthereumClient(client GEthClient) *EthereumClient {
+	return &EthereumClient{client: client}
 }
 
 func (ec *EthereumClient) FetchTransactionByHash(ctx context.Context, hash string) (api.Transaction, error) {

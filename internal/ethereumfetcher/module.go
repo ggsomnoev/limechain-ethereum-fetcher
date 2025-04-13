@@ -8,6 +8,8 @@ import (
 	"ethfetcher/internal/ethereumfetcher/store"
 	"time"
 
+	gethclient "github.com/ethereum/go-ethereum/ethclient"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/labstack/echo/v4"
 )
@@ -21,16 +23,11 @@ func Process(
 	ctx context.Context,
 	pool *pgxpool.Pool,
 	srv *echo.Echo,
-	ethNodeURL string,
-) error {
-	ethClient, err := ethclient.NewEthereumClientWithRetry(ctx, ethNodeURL, maxRetries, retryDelay)
-	if err != nil {
-		return err
-	}
+	gEthClient *gethclient.Client,
+) {
+	ethClient := ethclient.NewEthereumClient(gEthClient)
 
 	ethStore := store.NewStore(pool)
 	ethService := service.NewService(ethStore, ethClient)
 	process.RegisterEthHandlers(ctx, srv, ethService)
-
-	return nil
 }
