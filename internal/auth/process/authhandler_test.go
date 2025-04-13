@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 
@@ -15,9 +14,8 @@ import (
 	"ethfetcher/internal/auth/model"
 	"ethfetcher/internal/auth/process"
 	"ethfetcher/internal/auth/process/processfakes"
+	"ethfetcher/internal/auth/service"
 )
-
-var ErrAuthFailed = errors.New("invalid username or password")
 
 var _ = Describe("Auth Handler", func() {
 	var (
@@ -25,6 +23,8 @@ var _ = Describe("Auth Handler", func() {
 		svc      *processfakes.FakeService
 		ctx      context.Context
 		recorder *httptest.ResponseRecorder
+
+		validToken = "valid.jwt.token"
 	)
 
 	BeforeEach(func() {
@@ -38,8 +38,8 @@ var _ = Describe("Auth Handler", func() {
 
 	Describe("POST /lime/authenticate", func() {
 		When("valid credentials are provided", func() {
-			It("returns a JWT token", func() {
-				svc.AuthenticateReturns("valid.jwt.token", nil)
+			It("returns a valid token", func() {
+				svc.AuthenticateReturns(validToken, nil)
 
 				reqBody := model.AuthRequest{
 					Username: "alice",
@@ -57,7 +57,7 @@ var _ = Describe("Auth Handler", func() {
 				var res model.AuthResponse
 				err := json.Unmarshal(recorder.Body.Bytes(), &res)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(res.Token).To(Equal("valid.jwt.token"))
+				Expect(res.Token).To(Equal(validToken))
 			})
 		})
 
@@ -78,8 +78,8 @@ var _ = Describe("Auth Handler", func() {
 		})
 
 		When("authentication fails", func() {
-			It("returns an internal server error", func() {
-				svc.AuthenticateReturns("", ErrAuthFailed)
+			It("returns an unauthorized server error", func() {
+				svc.AuthenticateReturns("", service.ErrInvalidCredentials)
 
 				reqBody := model.AuthRequest{
 					Username: "alice",
@@ -92,12 +92,12 @@ var _ = Describe("Auth Handler", func() {
 
 				e.ServeHTTP(recorder, req)
 
-				Expect(recorder.Code).To(Equal(http.StatusInternalServerError))
+				Expect(recorder.Code).To(Equal(http.StatusUnauthorized))
 
 				var res map[string]string
 				err := json.Unmarshal(recorder.Body.Bytes(), &res)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(res["error"]).To(Equal(ErrAuthFailed.Error()))
+				Expect(res["error"]).To(Equal(service.ErrInvalidCredentials.Error()))
 			})
 		})
 	})

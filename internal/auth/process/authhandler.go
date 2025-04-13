@@ -2,7 +2,9 @@ package process
 
 import (
 	"context"
+	"errors"
 	"ethfetcher/internal/auth/model"
+	"ethfetcher/internal/auth/service"
 	"ethfetcher/internal/logger"
 	"net/http"
 
@@ -28,6 +30,11 @@ func handleAuthentication(ctx context.Context, svc Service) echo.HandlerFunc {
 
 		token, err := svc.Authenticate(ctx, req.Username, req.Password)
 		if err != nil {
+			if errors.Is(err, service.ErrInvalidCredentials) {
+				return c.JSON(http.StatusUnauthorized, map[string]string{
+					"error": "invalid credentials",
+				})
+			}
 			return c.JSON(http.StatusInternalServerError, map[string]string{
 				"error": err.Error(),
 			})

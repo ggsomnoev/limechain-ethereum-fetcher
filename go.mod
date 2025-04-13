@@ -7,6 +7,7 @@ toolchain go1.23.8
 require (
 	github.com/caarlos0/env/v6 v6.10.1
 	github.com/ethereum/go-ethereum v1.15.8
+	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/jackc/pgx/v5 v5.7.4
 	github.com/labstack/echo/v4 v4.13.3
 	github.com/onsi/ginkgo/v2 v2.23.4
