@@ -2,7 +2,9 @@ package process
 
 import (
 	"context"
+	"ethfetcher/internal/auth/model"
 	"ethfetcher/internal/logger"
+	"net/http"
 
 	"github.com/labstack/echo/v4"
 )
@@ -17,6 +19,20 @@ func RegisterAuthHandlers(ctx context.Context, srv *echo.Echo, svc Service) {
 
 func handleAuthentication(ctx context.Context, svc Service) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		return nil
+		var req model.AuthRequest
+		if err := c.Bind(&req); err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{
+				"error": err.Error(),
+			})
+		}
+
+		token, err := svc.Authenticate(ctx, req.Username, req.Password)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{
+				"error": err.Error(),
+			})
+		}
+
+		return c.JSON(http.StatusOK, model.AuthResponse{Token: token})
 	}
 }

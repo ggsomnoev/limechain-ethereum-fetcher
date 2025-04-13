@@ -12,6 +12,7 @@ const pollInterval = 60 * time.Second
 //counterfeiter:generate . Service
 type Service interface {
 	DeleteExpiredTokens(context.Context) error
+	Authenticate(context.Context, string, string) (string, error)
 }
 
 func Process(

@@ -21,3 +21,7 @@ func NewService(store Store, secret string) *Service {
 func (s *Service) DeleteExpiredTokens(ctx context.Context) error {
 	return nil
 }
+
+func (s *Service) Authenticate(ctx context.Context, username string, password string) (string, error) {
+	return "", nil
+}
