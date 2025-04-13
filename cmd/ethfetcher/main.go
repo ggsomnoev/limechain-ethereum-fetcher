@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"ethfetcher/internal/auth"
 	"ethfetcher/internal/eth"
 	ethfetcher "ethfetcher/internal/ethereumfetcher"
 	"ethfetcher/internal/lifecycle"
@@ -27,6 +28,8 @@ type Config struct {
 	EthRetryDelay time.Duration `env:"ETH_RETRY_DELAY" envDefault:"2s"`
 
 	APIPort string `env:"API_PORT" envDefault:"8080"`
+
+	JWTSecret string `env:"JWT_SECRET" envDefault:"superSecret"`
 }
 
 func main() {
@@ -56,6 +59,8 @@ func main() {
 	defer pool.Close()
 
 	srv := webapi.NewServer(appCtx)
+
+	auth.Process(appCtx, procSpawnFn, pool, srv, cfg.JWTSecret)
 
 	ethCfg := eth.DialConfig{
 		MaxRetries: cfg.EthMaxRetries,
