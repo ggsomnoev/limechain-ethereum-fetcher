@@ -2,6 +2,7 @@ package process
 
 import (
 	"context"
+	"errors"
 	"ethfetcher/internal/ethereumfetcher/api"
 	"ethfetcher/internal/logger"
 	"fmt"
@@ -10,6 +11,9 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+var ErrTxHashesParamIsRequired = errors.New("transactionHashes query parameter is required")
+
+//counterfeiter:generate . Service
 type Service interface {
 	GetEthTransactions(ctx context.Context, transactionHashes []string) ([]api.Transaction, error)
 	GetEthTransactionsByRLP(ctx context.Context, rlpHex string) ([]api.Transaction, error)
@@ -31,7 +35,7 @@ func handleEthTransactions(ctx context.Context, svc Service) echo.HandlerFunc {
 		transactionHashes := c.QueryParams()["transactionHashes"]
 		if len(transactionHashes) == 0 {
 			return c.JSON(http.StatusBadRequest, map[string]string{
-				"error": "transactionHashes query parameter is required",
+				"error": ErrTxHashesParamIsRequired.Error(),
 			})
 		}
 
