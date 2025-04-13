@@ -139,7 +139,7 @@ func handleMyTransactions(ctx context.Context, svc Service, tokenValidationSvc T
 		// TODO: get the transactions for the authorized user.
 
 		return c.JSON(http.StatusOK, map[string]interface{}{
-			"transactions": nil,
+			"transactions": []api.Transaction{},
 		})
 	}
 }
