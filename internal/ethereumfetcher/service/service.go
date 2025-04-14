@@ -12,8 +12,11 @@ import (
 //counterfeiter:generate . Store
 type Store interface {
 	GetAll(context.Context) ([]api.Transaction, error)
-	GetByHash(ctx context.Context, hash string) (api.Transaction, error)
+	GetByHash(context.Context, string) (api.Transaction, error)
 	Insert(context.Context, api.Transaction) error
+
+	GetAllByUser(context.Context, string) ([]api.Transaction, error)
+	InsertUserTransactions(context.Context, string, []api.Transaction) error
 }
 
 //counterfeiter:generate . EthereumClient
@@ -81,9 +84,13 @@ func (s *Service) GetAllEthTransactions(ctx context.Context) ([]api.Transaction,
 	return s.store.GetAll(ctx)
 }
 
-func (s *Service) GetAllUserTransactions(context.Context, string) ([]api.Transaction, error) {
-	return nil, nil
+func (s *Service) GetAllUserTransactions(ctx context.Context, username string) ([]api.Transaction, error) {
+	return s.store.GetAllByUser(ctx, username)
 }
-func (s *Service) SetUserTransactions(context.Context, string, []api.Transaction) error {
-	return nil
+
+func (s *Service) SetUserTransactions(ctx context.Context, username string, transactions []api.Transaction) error {
+	if len(transactions) == 0 {
+		return nil
+	}
+	return s.store.InsertUserTransactions(ctx, username, transactions)
 }

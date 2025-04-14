@@ -99,3 +99,11 @@ func (s *Store) Insert(ctx context.Context, tx api.Transaction) error {
 
 	return nil
 }
+
+func (s *Store) GetAllByUser(ctx context.Context, username string) ([]api.Transaction, error) {
+	return nil, nil
+}
+
+func (s *Store) InsertUserTransactions(ctx context.Context, username string, transaction []api.Transaction) error {
+	return nil
+}

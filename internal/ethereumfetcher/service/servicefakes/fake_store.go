@@ -22,6 +22,20 @@ type FakeStore struct {
 		result1 []api.Transaction
 		result2 error
 	}
+	GetAllByUserStub        func(context.Context, string) ([]api.Transaction, error)
+	getAllByUserMutex       sync.RWMutex
+	getAllByUserArgsForCall []struct {
+		arg1 context.Context
+		arg2 string
+	}
+	getAllByUserReturns struct {
+		result1 []api.Transaction
+		result2 error
+	}
+	getAllByUserReturnsOnCall map[int]struct {
+		result1 []api.Transaction
+		result2 error
+	}
 	GetByHashStub        func(context.Context, string) (api.Transaction, error)
 	getByHashMutex       sync.RWMutex
 	getByHashArgsForCall []struct {
@@ -46,6 +60,19 @@ type FakeStore struct {
 		result1 error
 	}
 	insertReturnsOnCall map[int]struct {
+		result1 error
+	}
+	InsertUserTransactionsStub        func(context.Context, string, []api.Transaction) error
+	insertUserTransactionsMutex       sync.RWMutex
+	insertUserTransactionsArgsForCall []struct {
+		arg1 context.Context
+		arg2 string
+		arg3 []api.Transaction
+	}
+	insertUserTransactionsReturns struct {
+		result1 error
+	}
+	insertUserTransactionsReturnsOnCall map[int]struct {
 		result1 error
 	}
 	invocations      map[string][][]interface{}
@@ -111,6 +138,71 @@ func (fake *FakeStore) GetAllReturnsOnCall(i int, result1 []api.Transaction, res
 		})
 	}
 	fake.getAllReturnsOnCall[i] = struct {
+		result1 []api.Transaction
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeStore) GetAllByUser(arg1 context.Context, arg2 string) ([]api.Transaction, error) {
+	fake.getAllByUserMutex.Lock()
+	ret, specificReturn := fake.getAllByUserReturnsOnCall[len(fake.getAllByUserArgsForCall)]
+	fake.getAllByUserArgsForCall = append(fake.getAllByUserArgsForCall, struct {
+		arg1 context.Context
+		arg2 string
+	}{arg1, arg2})
+	stub := fake.GetAllByUserStub
+	fakeReturns := fake.getAllByUserReturns
+	fake.recordInvocation("GetAllByUser", []interface{}{arg1, arg2})
+	fake.getAllByUserMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeStore) GetAllByUserCallCount() int {
+	fake.getAllByUserMutex.RLock()
+	defer fake.getAllByUserMutex.RUnlock()
+	return len(fake.getAllByUserArgsForCall)
+}
+
+func (fake *FakeStore) GetAllByUserCalls(stub func(context.Context, string) ([]api.Transaction, error)) {
+	fake.getAllByUserMutex.Lock()
+	defer fake.getAllByUserMutex.Unlock()
+	fake.GetAllByUserStub = stub
+}
+
+func (fake *FakeStore) GetAllByUserArgsForCall(i int) (context.Context, string) {
+	fake.getAllByUserMutex.RLock()
+	defer fake.getAllByUserMutex.RUnlock()
+	argsForCall := fake.getAllByUserArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeStore) GetAllByUserReturns(result1 []api.Transaction, result2 error) {
+	fake.getAllByUserMutex.Lock()
+	defer fake.getAllByUserMutex.Unlock()
+	fake.GetAllByUserStub = nil
+	fake.getAllByUserReturns = struct {
+		result1 []api.Transaction
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeStore) GetAllByUserReturnsOnCall(i int, result1 []api.Transaction, result2 error) {
+	fake.getAllByUserMutex.Lock()
+	defer fake.getAllByUserMutex.Unlock()
+	fake.GetAllByUserStub = nil
+	if fake.getAllByUserReturnsOnCall == nil {
+		fake.getAllByUserReturnsOnCall = make(map[int]struct {
+			result1 []api.Transaction
+			result2 error
+		})
+	}
+	fake.getAllByUserReturnsOnCall[i] = struct {
 		result1 []api.Transaction
 		result2 error
 	}{result1, result2}
@@ -243,15 +335,87 @@ func (fake *FakeStore) InsertReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
+func (fake *FakeStore) InsertUserTransactions(arg1 context.Context, arg2 string, arg3 []api.Transaction) error {
+	var arg3Copy []api.Transaction
+	if arg3 != nil {
+		arg3Copy = make([]api.Transaction, len(arg3))
+		copy(arg3Copy, arg3)
+	}
+	fake.insertUserTransactionsMutex.Lock()
+	ret, specificReturn := fake.insertUserTransactionsReturnsOnCall[len(fake.insertUserTransactionsArgsForCall)]
+	fake.insertUserTransactionsArgsForCall = append(fake.insertUserTransactionsArgsForCall, struct {
+		arg1 context.Context
+		arg2 string
+		arg3 []api.Transaction
+	}{arg1, arg2, arg3Copy})
+	stub := fake.InsertUserTransactionsStub
+	fakeReturns := fake.insertUserTransactionsReturns
+	fake.recordInvocation("InsertUserTransactions", []interface{}{arg1, arg2, arg3Copy})
+	fake.insertUserTransactionsMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeStore) InsertUserTransactionsCallCount() int {
+	fake.insertUserTransactionsMutex.RLock()
+	defer fake.insertUserTransactionsMutex.RUnlock()
+	return len(fake.insertUserTransactionsArgsForCall)
+}
+
+func (fake *FakeStore) InsertUserTransactionsCalls(stub func(context.Context, string, []api.Transaction) error) {
+	fake.insertUserTransactionsMutex.Lock()
+	defer fake.insertUserTransactionsMutex.Unlock()
+	fake.InsertUserTransactionsStub = stub
+}
+
+func (fake *FakeStore) InsertUserTransactionsArgsForCall(i int) (context.Context, string, []api.Transaction) {
+	fake.insertUserTransactionsMutex.RLock()
+	defer fake.insertUserTransactionsMutex.RUnlock()
+	argsForCall := fake.insertUserTransactionsArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+}
+
+func (fake *FakeStore) InsertUserTransactionsReturns(result1 error) {
+	fake.insertUserTransactionsMutex.Lock()
+	defer fake.insertUserTransactionsMutex.Unlock()
+	fake.InsertUserTransactionsStub = nil
+	fake.insertUserTransactionsReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeStore) InsertUserTransactionsReturnsOnCall(i int, result1 error) {
+	fake.insertUserTransactionsMutex.Lock()
+	defer fake.insertUserTransactionsMutex.Unlock()
+	fake.InsertUserTransactionsStub = nil
+	if fake.insertUserTransactionsReturnsOnCall == nil {
+		fake.insertUserTransactionsReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.insertUserTransactionsReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeStore) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.getAllMutex.RLock()
 	defer fake.getAllMutex.RUnlock()
+	fake.getAllByUserMutex.RLock()
+	defer fake.getAllByUserMutex.RUnlock()
 	fake.getByHashMutex.RLock()
 	defer fake.getByHashMutex.RUnlock()
 	fake.insertMutex.RLock()
 	defer fake.insertMutex.RUnlock()
+	fake.insertUserTransactionsMutex.RLock()
+	defer fake.insertUserTransactionsMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

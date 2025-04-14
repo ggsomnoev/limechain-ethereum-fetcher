@@ -172,5 +172,47 @@ var _ = Describe("Service", func() {
 			})
 		})
 
+		Describe("GetAllUserTransactions", func() {
+			It("succeeds", func() {
+				store.GetAllByUserReturns([]api.Transaction{tx}, nil)
+
+				txs, err := svc.GetAllUserTransactions(ctx, "user123")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(txs).To(HaveLen(1))
+				Expect(txs[0]).To(Equal(tx))
+
+				Expect(store.GetAllByUserCallCount()).To(Equal(1))
+				_, user := store.GetAllByUserArgsForCall(0)
+				Expect(user).To(Equal("user123"))
+			})
+
+			It("returns an error", func() {
+				store.GetAllByUserReturns(nil, ErrStoreFailure)
+
+				txs, err := svc.GetAllUserTransactions(ctx, "user123")
+				Expect(err).To(MatchError(ErrStoreFailure))
+				Expect(txs).To(BeNil())
+			})
+		})
+
+		Describe("SetUserTransactions", func() {
+			It("succeeds", func() {
+				err := svc.SetUserTransactions(ctx, "user123", []api.Transaction{tx})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(store.InsertUserTransactionsCallCount()).To(Equal(1))
+
+				_, user, txs := store.InsertUserTransactionsArgsForCall(0)
+				Expect(user).To(Equal("user123"))
+				Expect(txs).To(HaveLen(1))
+				Expect(txs[0]).To(Equal(tx))
+			})
+
+			It("returns an error", func() {
+				store.InsertUserTransactionsReturns(ErrStoreFailure)
+
+				err := svc.SetUserTransactions(ctx, "user123", []api.Transaction{tx})
+				Expect(err).To(MatchError(ErrStoreFailure))
+			})
+		})
 	})
 })
