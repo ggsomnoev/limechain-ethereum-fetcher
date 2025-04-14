@@ -25,4 +25,14 @@ CREATE TABLE IF NOT EXISTS auth_tokens (
     expires_at TIMESTAMP NOT NULL
 );
 
+CREATE TABLE user_transaction_events (
+    uuid UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    transaction_hash TEXT NOT NULL,
+    username TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    FOREIGN KEY (transaction_hash) REFERENCES transactions (transaction_hash) ON DELETE CASCADE
+);
+
+-- TODO: Add/remove posible indexes.
+
 COMMIT;

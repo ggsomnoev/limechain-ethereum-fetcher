@@ -12,7 +12,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-const TransactionTable = "transactions"
+const (
+	TransactionTable      = "transactions"
+	UserTransactionsTable = "user_transaction_events"
+)
 
 var ErrDuplicateTransaction = errors.New("transaction already exists")
 
@@ -101,9 +104,50 @@ func (s *Store) Insert(ctx context.Context, tx api.Transaction) error {
 }
 
 func (s *Store) GetAllByUser(ctx context.Context, username string) ([]api.Transaction, error) {
-	return nil, nil
+	query := fmt.Sprintf(`
+		SELECT t.transaction_hash, t.transaction_data
+		FROM %s t JOIN %s e ON t.transaction_hash = e.transaction_hash
+		WHERE e.username = $1
+		ORDER BY e.created_at DESC`, TransactionTable, UserTransactionsTable)
+
+	rows, err := s.pool.Query(ctx, query, username)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch user transactions from DB: %w", err)
+	}
+	defer rows.Close()
+
+	var transactions []api.Transaction
+	for rows.Next() {
+		var tx api.Transaction
+		var transactionData []byte
+
+		if err := rows.Scan(&tx.TransactionHash, &transactionData); err != nil {
+			return nil, fmt.Errorf("failed to scan transaction row: %w", err)
+		}
+
+		if err := json.Unmarshal(transactionData, &tx); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal transaction data: %w", err)
+		}
+
+		transactions = append(transactions, tx)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
+	return transactions, nil
 }
 
-func (s *Store) InsertUserTransactions(ctx context.Context, username string, transaction []api.Transaction) error {
+func (s *Store) InsertUserTransactions(ctx context.Context, username string, transactions []api.Transaction) error {
+	query := fmt.Sprintf(`INSERT INTO %s (transaction_hash, username) VALUES ($1, $2)`, UserTransactionsTable)
+
+	for _, tx := range transactions {
+		_, err := s.pool.Exec(ctx, query, tx.TransactionHash, username)
+		if err != nil {
+			return fmt.Errorf("failed to insert user transaction event: %w", err)
+		}
+	}
+
 	return nil
 }
