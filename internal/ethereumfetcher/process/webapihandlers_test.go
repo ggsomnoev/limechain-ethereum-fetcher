@@ -30,7 +30,7 @@ var _ = Describe("Web API", func() {
 		svc                *processfakes.FakeService
 		tokenValidationSvc *processfakes.FakeTokenValidationService
 		ctx                context.Context
-		txHash             string
+		txHash, rlpHex     string
 		tx                 api.Transaction
 		recorder           *httptest.ResponseRecorder
 	)
@@ -43,6 +43,7 @@ var _ = Describe("Web API", func() {
 		recorder = httptest.NewRecorder()
 
 		txHash = "0xabc"
+		rlpHex = "f123123dsffasdsaqweqwesasdasda"
 		tx = api.Transaction{
 			TransactionHash: txHash,
 			From:            "0xfrom",
@@ -65,12 +66,18 @@ var _ = Describe("Web API", func() {
 
 	Describe("GET /lime/eth", func() {
 		When("transactionHashes are provided", func() {
-			It("returns the transactions", func() {
-				svc.GetEthTransactionsReturns([]api.Transaction{tx}, nil)
+			var req *http.Request
 
-				req := httptest.NewRequest(http.MethodGet, "/lime/eth?transactionHashes="+txHash, nil)
+			JustBeforeEach(func() {
 				e.ServeHTTP(recorder, req)
+			})
 
+			BeforeEach(func() {
+				req = httptest.NewRequest(http.MethodGet, "/lime/eth?transactionHashes="+txHash, nil)
+				svc.GetEthTransactionsReturns([]api.Transaction{tx}, nil)
+			})
+
+			It("returns the transactions", func() {
 				Expect(recorder.Code).To(Equal(http.StatusOK))
 
 				var response map[string]interface{}
@@ -78,6 +85,49 @@ var _ = Describe("Web API", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(response["transactions"]).To(HaveLen(1))
 				ItReturnsTheTx(response)
+			})
+
+			Context("and an authentication token is provided", func() {
+				BeforeEach(func() {
+					req.Header.Set("Authorization", "Bearer validtoken")
+
+					svc.SetUserTransactionsReturns(nil)
+					tokenValidationSvc.ValidateTokenReturns(true, "user123", nil)
+				})
+
+				It("succeeds", func() {
+					Expect(recorder.Code).To(Equal(http.StatusOK))
+					req.Header.Set("Authorization", "Bearer validtoken")
+
+					var response map[string]interface{}
+					err := json.Unmarshal(recorder.Body.Bytes(), &response)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(response["transactions"]).To(HaveLen(1))
+					ItReturnsTheTx(response)
+
+					Expect(svc.SetUserTransactionsCallCount()).To(Equal(1))
+					_, userID, txs := svc.SetUserTransactionsArgsForCall(0)
+					Expect(userID).To(Equal("user123"))
+					Expect(txs).To(HaveLen(1))
+				})
+
+				Context("and an error occurs while storing user transactions", func() {
+					BeforeEach(func() {
+						svc.SetUserTransactionsReturns(ErrStoreError)
+					})
+
+					It("returns an internal server error", func() {
+						Expect(recorder.Code).To(Equal(http.StatusInternalServerError))
+
+						var response map[string]string
+						err := json.Unmarshal(recorder.Body.Bytes(), &response)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(response["error"]).To(Equal(
+							fmt.Sprintf("%s: %v", process.ErrStoreUserTransactions.Error(), ErrStoreError),
+						))
+					})
+				})
 			})
 		})
 
@@ -114,12 +164,18 @@ var _ = Describe("Web API", func() {
 
 	Describe("GET /lime/eth/:rlphex", func() {
 		When("RLP hex is valid", func() {
-			It("returns the transactions", func() {
-				svc.GetEthTransactionsByRLPReturns([]api.Transaction{tx}, nil)
+			var req *http.Request
 
-				req := httptest.NewRequest(http.MethodGet, "/lime/eth/"+txHash, nil)
+			JustBeforeEach(func() {
 				e.ServeHTTP(recorder, req)
+			})
 
+			BeforeEach(func() {
+				req = httptest.NewRequest(http.MethodGet, "/lime/eth/"+rlpHex, nil)
+				svc.GetEthTransactionsByRLPReturns([]api.Transaction{tx}, nil)
+			})
+
+			It("returns the transactions", func() {
 				Expect(recorder.Code).To(Equal(http.StatusOK))
 
 				var response map[string]interface{}
@@ -127,6 +183,49 @@ var _ = Describe("Web API", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(response["transactions"]).To(HaveLen(1))
 				ItReturnsTheTx(response)
+			})
+
+			Context("and an authentication token is provided", func() {
+				BeforeEach(func() {
+					req.Header.Set("Authorization", "Bearer validtoken")
+
+					svc.SetUserTransactionsReturns(nil)
+					tokenValidationSvc.ValidateTokenReturns(true, "user123", nil)
+				})
+
+				It("succeeds", func() {
+					Expect(recorder.Code).To(Equal(http.StatusOK))
+					req.Header.Set("Authorization", "Bearer validtoken")
+
+					var response map[string]interface{}
+					err := json.Unmarshal(recorder.Body.Bytes(), &response)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(response["transactions"]).To(HaveLen(1))
+					ItReturnsTheTx(response)
+
+					Expect(svc.SetUserTransactionsCallCount()).To(Equal(1))
+					_, userID, txs := svc.SetUserTransactionsArgsForCall(0)
+					Expect(userID).To(Equal("user123"))
+					Expect(txs).To(HaveLen(1))
+				})
+
+				Context("and an error occurs while storing user transactions", func() {
+					BeforeEach(func() {
+						svc.SetUserTransactionsReturns(ErrStoreError)
+					})
+
+					It("returns an internal server error", func() {
+						Expect(recorder.Code).To(Equal(http.StatusInternalServerError))
+
+						var response map[string]string
+						err := json.Unmarshal(recorder.Body.Bytes(), &response)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(response["error"]).To(Equal(
+							fmt.Sprintf("%s: %v", process.ErrStoreUserTransactions.Error(), ErrStoreError),
+						))
+					})
+				})
 			})
 		})
 
@@ -148,13 +247,106 @@ var _ = Describe("Web API", func() {
 	})
 
 	Describe("GET /lime/all", func() {
+		var req *http.Request
+
+		JustBeforeEach(func() {
+			e.ServeHTTP(recorder, req)
+		})
+
+		BeforeEach(func() {
+			req = httptest.NewRequest(http.MethodGet, "/lime/all", nil)
+			svc.GetAllEthTransactionsReturns([]api.Transaction{tx}, nil)
+		})
+
 		When("all transactions are fetched successfully", func() {
 			It("returns all transactions", func() {
-				svc.GetAllEthTransactionsReturns([]api.Transaction{tx}, nil)
+				Expect(recorder.Code).To(Equal(http.StatusOK))
 
-				req := httptest.NewRequest(http.MethodGet, "/lime/all", nil)
-				e.ServeHTTP(recorder, req)
+				var response map[string]interface{}
+				err := json.Unmarshal(recorder.Body.Bytes(), &response)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(response["transactions"]).To(HaveLen(1))
+				ItReturnsTheTx(response)
+			})
 
+			Context("and an authentication token is provided", func() {
+				BeforeEach(func() {
+					req.Header.Set("Authorization", "Bearer validtoken")
+
+					svc.SetUserTransactionsReturns(nil)
+					tokenValidationSvc.ValidateTokenReturns(true, "user123", nil)
+				})
+
+				It("succeeds", func() {
+					Expect(recorder.Code).To(Equal(http.StatusOK))
+					req.Header.Set("Authorization", "Bearer validtoken")
+
+					var response map[string]interface{}
+					err := json.Unmarshal(recorder.Body.Bytes(), &response)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(response["transactions"]).To(HaveLen(1))
+					ItReturnsTheTx(response)
+
+					Expect(svc.SetUserTransactionsCallCount()).To(Equal(1))
+					_, userID, txs := svc.SetUserTransactionsArgsForCall(0)
+					Expect(userID).To(Equal("user123"))
+					Expect(txs).To(HaveLen(1))
+				})
+
+				Context("and an error occurs while storing user transactions", func() {
+					BeforeEach(func() {
+						svc.SetUserTransactionsReturns(ErrStoreError)
+					})
+
+					It("returns an internal server error", func() {
+						Expect(recorder.Code).To(Equal(http.StatusInternalServerError))
+
+						var response map[string]string
+						err := json.Unmarshal(recorder.Body.Bytes(), &response)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(response["error"]).To(Equal(
+							fmt.Sprintf("%s: %v", process.ErrStoreUserTransactions.Error(), ErrStoreError),
+						))
+					})
+				})
+			})
+		})
+
+		When("an error occurs while fetching all transactions", func() {
+			BeforeEach(func() {
+				svc.GetAllEthTransactionsReturns(nil, ErrStoreError)
+			})
+
+			It("returns an internal server error", func() {
+				Expect(recorder.Code).To(Equal(http.StatusInternalServerError))
+
+				var response map[string]string
+				err := json.Unmarshal(recorder.Body.Bytes(), &response)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(response["error"]).To(Equal(fmt.Sprintf("failed to fetch all transactions: %s", ErrStoreError.Error())))
+			})
+		})
+	})
+
+	Describe("GET /lime/my", func() {
+		var req *http.Request
+
+		JustBeforeEach(func() {
+			e.ServeHTTP(recorder, req)
+		})
+
+		BeforeEach(func() {
+			req = httptest.NewRequest(http.MethodGet, "/lime/my", nil)
+			svc.GetAllUserTransactionsReturns([]api.Transaction{tx}, nil)
+		})
+
+		When("token is valid and user has transactions", func() {
+			BeforeEach(func() {
+				req.Header.Set("Authorization", "Bearer validtoken")
+				tokenValidationSvc.ValidateTokenReturns(true, "user123", nil)
+			})
+			It("succeeds", func() {
 				Expect(recorder.Code).To(Equal(http.StatusOK))
 
 				var response map[string]interface{}
@@ -165,19 +357,45 @@ var _ = Describe("Web API", func() {
 			})
 		})
 
-		When("an error occurs while fetching all transactions", func() {
-			It("returns an internal server error", func() {
-				svc.GetAllEthTransactionsReturns(nil, ErrStoreError)
+		When("token is invalid", func() {
+			BeforeEach(func() {
+				req.Header.Set("Authorization", "Bearer invalidtoken")
+				tokenValidationSvc.ValidateTokenReturns(false, "", nil)
+			})
+			It("returns unauthorized", func() {
+				Expect(recorder.Code).To(Equal(http.StatusUnauthorized))
 
-				req := httptest.NewRequest(http.MethodGet, "/lime/all", nil)
-				e.ServeHTTP(recorder, req)
+				var response map[string]string
+				err := json.Unmarshal(recorder.Body.Bytes(), &response)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(response["error"]).To(Equal("invalid or expired token"))
+			})
+		})
 
+		When("no token is provided", func() {
+			It("returns unauthorized", func() {
+				Expect(recorder.Code).To(Equal(http.StatusUnauthorized))
+
+				var response map[string]string
+				err := json.Unmarshal(recorder.Body.Bytes(), &response)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(response["error"]).To(Equal("authorization token is required"))
+			})
+		})
+
+		When("an error occurs while getting user transactions", func() {
+			BeforeEach(func() {
+				req.Header.Set("Authorization", "Bearer validtoken")
+				tokenValidationSvc.ValidateTokenReturns(true, "user123", nil)
+				svc.GetAllUserTransactionsReturns(nil, ErrStoreError)
+			})
+			It("returns internal server error", func() {
 				Expect(recorder.Code).To(Equal(http.StatusInternalServerError))
 
 				var response map[string]string
 				err := json.Unmarshal(recorder.Body.Bytes(), &response)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(response["error"]).To(Equal(fmt.Sprintf("failed to fetch all transactions: %s", ErrStoreError.Error())))
+				Expect(response["error"]).To(Equal(fmt.Sprintf("%s: %v", process.ErrGetUserTransactions.Error(), ErrStoreError)))
 			})
 		})
 	})

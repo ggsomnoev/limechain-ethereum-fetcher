@@ -80,3 +80,10 @@ func (s *Service) GetEthTransactionsByRLP(ctx context.Context, rlpHex string) ([
 func (s *Service) GetAllEthTransactions(ctx context.Context) ([]api.Transaction, error) {
 	return s.store.GetAll(ctx)
 }
+
+func (s *Service) GetAllUserTransactions(context.Context, string) ([]api.Transaction, error) {
+	return nil, nil
+}
+func (s *Service) SetUserTransactions(context.Context, string, []api.Transaction) error {
+	return nil
+}

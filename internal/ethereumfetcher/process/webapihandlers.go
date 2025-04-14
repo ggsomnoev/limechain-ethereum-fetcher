@@ -12,13 +12,19 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-var ErrTxHashesParamIsRequired = errors.New("transactionHashes query parameter is required")
+var (
+	ErrTxHashesParamIsRequired = errors.New("transactionHashes query parameter is required")
+	ErrStoreUserTransactions   = errors.New("failed to store user transactions")
+	ErrGetUserTransactions     = errors.New("failed to get the user transactions")
+)
 
 //counterfeiter:generate . Service
 type Service interface {
 	GetEthTransactions(context.Context, []string) ([]api.Transaction, error)
 	GetEthTransactionsByRLP(context.Context, string) ([]api.Transaction, error)
 	GetAllEthTransactions(context.Context) ([]api.Transaction, error)
+	GetAllUserTransactions(context.Context, string) ([]api.Transaction, error)
+	SetUserTransactions(context.Context, string, []api.Transaction) error
 }
 
 //counterfeiter:generate . TokenValidationService
@@ -53,7 +59,7 @@ func handleEthTransactions(ctx context.Context, svc Service, tokenValidationSvc 
 			})
 		}
 
-		_, err = validateTokenIfPresent(ctx, c.Request().Header, tokenValidationSvc)
+		username, err := validateTokenIfPresent(ctx, c.Request().Header, tokenValidationSvc)
 		if err != nil {
 			if err.Error() == "invalid or expired token" {
 				return c.JSON(http.StatusUnauthorized, map[string]string{"error": err.Error()})
@@ -61,7 +67,13 @@ func handleEthTransactions(ctx context.Context, svc Service, tokenValidationSvc 
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		}
 
-		// TODO: store the transactions for the authorized user.
+		if username != "" {
+			if err := svc.SetUserTransactions(ctx, username, transactions); err != nil {
+				return c.JSON(http.StatusInternalServerError, map[string]string{
+					"error": fmt.Sprintf("%s: %v", ErrStoreUserTransactions.Error(), err),
+				})
+			}
+		}
 
 		return c.JSON(http.StatusOK, map[string]interface{}{
 			"transactions": transactions,
@@ -80,7 +92,7 @@ func handleEthTransactionByRLP(ctx context.Context, svc Service, tokenValidation
 			})
 		}
 
-		_, err = validateTokenIfPresent(ctx, c.Request().Header, tokenValidationSvc)
+		username, err := validateTokenIfPresent(ctx, c.Request().Header, tokenValidationSvc)
 		if err != nil {
 			if err.Error() == "invalid or expired token" {
 				return c.JSON(http.StatusUnauthorized, map[string]string{"error": err.Error()})
@@ -88,7 +100,13 @@ func handleEthTransactionByRLP(ctx context.Context, svc Service, tokenValidation
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		}
 
-		// TODO: store the transactions for the authorized user.
+		if username != "" {
+			if err := svc.SetUserTransactions(ctx, username, transactions); err != nil {
+				return c.JSON(http.StatusInternalServerError, map[string]string{
+					"error": fmt.Sprintf("%s: %v", ErrStoreUserTransactions.Error(), err),
+				})
+			}
+		}
 
 		return c.JSON(http.StatusOK, map[string]interface{}{
 			"transactions": transactions,
@@ -105,7 +123,7 @@ func handleAllEthTransactions(ctx context.Context, svc Service, tokenValidationS
 			})
 		}
 
-		_, err = validateTokenIfPresent(ctx, c.Request().Header, tokenValidationSvc)
+		username, err := validateTokenIfPresent(ctx, c.Request().Header, tokenValidationSvc)
 		if err != nil {
 			if err.Error() == "invalid or expired token" {
 				return c.JSON(http.StatusUnauthorized, map[string]string{"error": err.Error()})
@@ -113,7 +131,13 @@ func handleAllEthTransactions(ctx context.Context, svc Service, tokenValidationS
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		}
 
-		// TODO: store the transactions for the authorized user.
+		if username != "" {
+			if err := svc.SetUserTransactions(ctx, username, transactions); err != nil {
+				return c.JSON(http.StatusInternalServerError, map[string]string{
+					"error": fmt.Sprintf("%s: %v", ErrStoreUserTransactions.Error(), err),
+				})
+			}
+		}
 
 		return c.JSON(http.StatusOK, map[string]interface{}{
 			"transactions": transactions,
@@ -136,23 +160,24 @@ func handleMyTransactions(ctx context.Context, svc Service, tokenValidationSvc T
 			})
 		}
 
-		// TODO: get the transactions for the authorized user.
+		transactions, err := svc.GetAllUserTransactions(ctx, username)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{
+				"error": fmt.Sprintf("%s: %v", ErrGetUserTransactions.Error(), err),
+			})
+		}
 
 		return c.JSON(http.StatusOK, map[string]interface{}{
-			"transactions": []api.Transaction{},
+			"transactions": transactions,
 		})
 	}
-}
-
-func extractTokenFromHeader(header http.Header) string {
-	return strings.TrimPrefix(header.Get("Authorization"), "Bearer ")
 }
 
 func validateTokenIfPresent(ctx context.Context,
 	header http.Header,
 	tokenValidationSvc TokenValidationService,
 ) (string, error) {
-	token := extractTokenFromHeader(header)
+	token := strings.TrimPrefix(header.Get("Authorization"), "Bearer ")
 	if token == "" {
 		return "", nil
 	}
